@@ -1,0 +1,58 @@
+{
+    "global_fields": [
+        {
+            "key": "version",
+            "label": "版本号",
+            "type": "text"
+        },
+        {
+            "key": "deploy_date",
+            "label": "上线日期",
+            "type": "date"
+        },
+        {
+            "key": "owner",
+            "label": "变更人",
+            "type": "text"
+        }
+    ],
+    "step_types": {
+        "java_deploy": {
+            "name": "Java后端发包",
+            "template_file": "step_java.docx",
+            "fields": [
+                {
+                    "key": "app_name",
+                    "label": "应用名称",
+                    "type": "text"
+                },
+                {
+                    "key": "deploy_unit",
+                    "label": "部署单元",
+                    "type": "text"
+                },
+                {
+                    "key": "pkg_version",
+                    "label": "包版本",
+                    "type": "text"
+                }
+            ]
+        },
+        "sql_exec": {
+            "name": "SQL执行",
+            "template_file": "step_sql.docx",
+            "fields": [
+                {
+                    "key": "db_name",
+                    "label": "数据库名",
+                    "type": "text"
+                },
+                {
+                    "key": "sql_content",
+                    "label": "SQL脚本/文件名",
+                    "type": "textarea"
+                }
+            ]
+        }
+    }
+}
