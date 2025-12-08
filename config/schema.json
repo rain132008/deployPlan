@@ -20,6 +20,7 @@
         "java_deploy": {
             "name": "Java后端发包",
             "template_file": "step_java.docx",
+            "is_table": true,
             "fields": [
                 {
                     "key": "app_name",

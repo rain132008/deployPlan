@@ -65,6 +65,10 @@
               <el-input v-model="step.template_file" placeholder="step_xxx.docx" />
               <div class="tip">请确保 templates/steps/ 下存在该文件</div>
             </el-form-item>
+             <el-form-item label="表格录入 (Table)">
+               <el-switch v-model="step.is_table" />
+               <div class="tip">开启后该步骤支持多行数据录入 (Enable for multiple rows)</div>
+             </el-form-item>
             
             <div class="sub-header">
               <span>字段定义 (Fields)</span>

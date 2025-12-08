@@ -37,10 +37,36 @@ def create_master():
 def create_java_step():
     doc = Document()
     doc.add_heading('Java Deployment', level=2)
-    p = doc.add_paragraph()
-    p.add_run('App Name: {{ app_name }}\n')
-    p.add_run('Unit: {{ deploy_unit }}\n')
-    p.add_run('Version: {{ pkg_version }}')
+    
+    # Docxtpl table loop syntax:
+    # We want a row for each item in the 'items' list.
+    # The columns will be: App Name, Unit, Version
+    
+    table = doc.add_table(rows=1, cols=3)
+    table.style = 'Table Grid'
+    
+    # Header
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'App Name'
+    hdr_cells[1].text = 'Unit'
+    hdr_cells[2].text = 'Version'
+    
+    # Data Row (Template)
+    # We add a row with variables, and put the loop tags around the row or inside the first/last cell depending on complexity.
+    # For docxtpl, standard way is:
+    # {% tr for item in items %} ... cell contents ... {% tr endfor %}
+    # But python-docx doesn't let us easily write raw XML tags around rows.
+    # Docxtpl lets us put `{% tr for item in items %}` in the first cell of the row, 
+    # and `{% tr endfor %}` in the last cell (or implicit if same row).
+    # Ideally:
+    # Cell 1: {% tr for item in items %}{{ item.app_name }}
+    # Cell 2: {{ item.deploy_unit }}
+    # Cell 3: {{ item.pkg_version }}{% tr endfor %}
+    
+    row_cells = table.add_row().cells
+    row_cells[0].text = '{% tr for item in items %}{{ item.app_name }}'
+    row_cells[1].text = '{{ item.deploy_unit }}'
+    row_cells[2].text = '{{ item.pkg_version }}{% tr endfor %}'
     
     path = os.path.join(STEPS_DIR, "step_java.docx")
     doc.save(path)

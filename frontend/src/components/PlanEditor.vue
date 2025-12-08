@@ -54,13 +54,37 @@
                
                <!-- Dynamic Step Form -->
                <el-form label-width="120px" size="small">
-                 <div v-for="(field, fIdx) in getStepFields(step.type)" :key="fIdx">
-                   <el-form-item :label="field.label">
-                      <el-date-picker v-if="field.type === 'date'" v-model="step.data[field.key]" type="date" value-format="YYYY-MM-DD" />
-                      <el-input v-else-if="field.type === 'textarea'" type="textarea" :rows="3" v-model="step.data[field.key]" />
-                      <el-input v-else v-model="step.data[field.key]" />
-                   </el-form-item>
+                 
+                 <!-- Table Mode -->
+                 <div v-if="isTableStep(step.type)">
+                   <el-table :data="getStepItems(step)" style="width: 100%" border size="small">
+                     <el-table-column v-for="(field, fIdx) in getStepFields(step.type)" :key="fIdx" :label="field.label" :prop="field.key">
+                       <template #default="scope">
+                          <el-date-picker v-if="field.type === 'date'" v-model="scope.row[field.key]" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+                          <el-input v-else-if="field.type === 'textarea'" type="textarea" :rows="1" v-model="scope.row[field.key]" />
+                          <el-input v-else v-model="scope.row[field.key]" />
+                       </template>
+                     </el-table-column>
+                     <el-table-column label="Op" width="60">
+                       <template #default="scope">
+                         <el-button type="danger" link :icon="Delete" @click="removeStepItem(step, scope.$index)" />
+                       </template>
+                     </el-table-column>
+                   </el-table>
+                   <el-button size="small" type="primary" link style="margin-top: 5px" @click="addStepItem(step)">+ Add Row</el-button>
                  </div>
+
+                 <!-- Normal Form Mode -->
+                 <div v-else>
+                   <div v-for="(field, fIdx) in getStepFields(step.type)" :key="fIdx">
+                     <el-form-item :label="field.label">
+                        <el-date-picker v-if="field.type === 'date'" v-model="step.data[field.key]" type="date" value-format="YYYY-MM-DD" />
+                        <el-input v-else-if="field.type === 'textarea'" type="textarea" :rows="3" v-model="step.data[field.key]" />
+                        <el-input v-else v-model="step.data[field.key]" />
+                     </el-form-item>
+                   </div>
+                 </div>
+
                </el-form>
             </el-collapse-item>
           </el-collapse>
@@ -142,6 +166,27 @@ const moveStep = (idx, dir) => {
   const item = plan.value.steps[idx]
   plan.value.steps.splice(idx, 1)
   plan.value.steps.splice(idx + dir, 0, item)
+}
+
+const isTableStep = (type) => {
+  return config.value.step_types[type]?.is_table || false
+}
+
+const getStepItems = (step) => {
+  // Ensure data.items exists
+  if (!step.data.items || !Array.isArray(step.data.items)) {
+    step.data.items = []
+  }
+  return step.data.items
+}
+
+const addStepItem = (step) => {
+  if (!step.data.items) step.data.items = []
+  step.data.items.push({})
+}
+
+const removeStepItem = (step, index) => {
+  if (step.data.items) step.data.items.splice(index, 1)
 }
 
 const savePlan = async () => {
