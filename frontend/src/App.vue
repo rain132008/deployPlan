@@ -25,6 +25,7 @@
           <el-table-column label="Actions" width="150" align="right">
             <template #default="scope">
               <el-button v-if="scope && scope.row" size="small" @click="editPlan(scope.row.filename)">Edit</el-button>
+              <el-button v-if="scope && scope.row" size="small" type="success" @click="clonePlan(scope.row.filename)">Clone</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -34,7 +35,7 @@
       <ConfigEditor v-if="view === 'config'" />
 
       <!-- PLAN EDITOR VIEW -->
-      <PlanEditor v-if="view === 'editor'" :filename="currentPlanFile" @back="view = 'list'; loadPlans()" />
+      <PlanEditor v-if="view === 'editor'" :filename="currentPlanFile" :source-filename="sourcePlanFile" @back="view = 'list'; loadPlans()" />
 
     </el-main>
   </el-container>
@@ -51,6 +52,7 @@ const view = ref('list') // list, config, editor
 const plans = ref([])
 const loading = ref(false)
 const currentPlanFile = ref(null)
+const sourcePlanFile = ref(null)
 
 const API_BASE = ''
 
@@ -68,11 +70,19 @@ const loadPlans = async () => {
 
 const createNewPlan = () => {
   currentPlanFile.value = null
+  sourcePlanFile.value = null
   view.value = 'editor'
 }
 
 const editPlan = (filename) => {
   currentPlanFile.value = filename
+  sourcePlanFile.value = null
+  view.value = 'editor'
+}
+
+const clonePlan = (filename) => {
+  currentPlanFile.value = null
+  sourcePlanFile.value = filename
   view.value = 'editor'
 }
 

@@ -65,14 +65,17 @@
               <el-input v-model="step.template_file" placeholder="step_xxx.docx" />
               <div class="tip">请确保 templates/steps/ 下存在该文件</div>
             </el-form-item>
-             <el-form-item label="表格录入 (Table)">
-               <el-switch v-model="step.is_table" />
+            <!-- MIXED MODE: Common Fields vs Table Fields -->
+            
+             <el-form-item label="Enable Table Data">
+               <el-switch v-model="step.has_table" />
                <div class="tip">开启后该步骤支持多行数据录入 (Enable for multiple rows)</div>
              </el-form-item>
-            
+             
+             <!-- COMMON FIELDS -->
             <div class="sub-header">
-              <span>字段定义 (Fields)</span>
-              <el-button type="primary" link @click="addStepField(step)">+ 添加字段</el-button>
+              <span>公共字段 (Common Fields)</span>
+              <el-button type="primary" link @click="addStepField(step, 'common')">+ Add Field</el-button>
             </div>
             
             <el-table :data="step.fields" style="width: 100%" size="small" border>
@@ -97,10 +100,45 @@
               </el-table-column>
               <el-table-column label="Op" width="60">
                 <template #default="{ $index }">
-                  <el-button type="danger" link :icon="Delete" @click="removeStepField(step, $index)" />
+                  <el-button type="danger" link :icon="Delete" @click="removeStepField(step, $index, 'common')" />
                 </template>
               </el-table-column>
             </el-table>
+
+            <!-- TABLE FIELDS (Only if has_table) -->
+            <div v-if="step.has_table">
+                <div class="sub-header">
+                  <span>表格列 (Table Columns)</span>
+                  <el-button type="primary" link @click="addStepField(step, 'table')">+ Add Column</el-button>
+                </div>
+                
+                <el-table :data="step.table_fields" style="width: 100%" size="small" border>
+                  <el-table-column prop="label" label="Label">
+                    <template #default="{ row }">
+                      <el-input v-model="row.label" />
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="key" label="Key">
+                    <template #default="{ row }">
+                      <el-input v-model="row.key" />
+                    </template>
+                  </el-table-column>
+                   <el-table-column prop="type" label="Type" width="120">
+                    <template #default="{ row }">
+                      <el-select v-model="row.type" size="small">
+                        <el-option label="Text" value="text" />
+                        <el-option label="Date" value="date" />
+                        <el-option label="Textarea" value="textarea" />
+                      </el-select>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="Op" width="60">
+                    <template #default="{ $index }">
+                      <el-button type="danger" link :icon="Delete" @click="removeStepField(step, $index, 'table')" />
+                    </template>
+                  </el-table-column>
+                </el-table>
+            </div>
 
             <div style="margin-top: 15px; text-align: right;">
               <el-popconfirm title="确定删除这个步骤类型吗?" @confirm="removeStepType(key)">
@@ -158,9 +196,23 @@ const loadConfig = async () => {
   try {
     const res = await axios.get(`${API_BASE}/api/config/`)
     // Add _key to step types for display/logic
-    const data = res.data
+    // MIGRATION Logic:
+    // If step has is_table=true and no separate table_fields, move fields to table_fields
     for(let key in data.step_types) {
-      data.step_types[key]._key = key
+        let s = data.step_types[key]
+        s._key = key
+        if(s.is_table && (!s.table_fields || s.table_fields.length === 0)) {
+            // Old format: is_table=true means all fields were table fields
+            s.has_table = true
+            s.table_fields = [...(s.fields || [])]
+            s.fields = [] // Clear common fields
+        } else {
+            // Ensure array existence
+            if(!s.fields) s.fields = []
+            if(!s.table_fields) s.table_fields = []
+            // Sync has_table
+            if(s.is_table) s.has_table = true
+        }
     }
     config.value = data
   } catch (e) {
@@ -209,7 +261,9 @@ const confirmAddStepType = () => {
     _key: k,
     name: newStepForm.value.name,
     template_file: '',
-    fields: []
+    has_table: false,
+    fields: [],
+    table_fields: []
   }
   showAddStepDialog.value = false
 }
@@ -218,13 +272,22 @@ const removeStepType = (key) => {
   delete config.value.step_types[key]
 }
 
-const addStepField = (step) => {
-  if(!step.fields) step.fields = []
-  step.fields.push({ key: '', label: '', type: 'text' })
+const addStepField = (step, type) => {
+  if (type === 'table') {
+     if(!step.table_fields) step.table_fields = []
+     step.table_fields.push({ key: '', label: '', type: 'text' })
+  } else {
+     if(!step.fields) step.fields = []
+     step.fields.push({ key: '', label: '', type: 'text' })
+  }
 }
 
-const removeStepField = (step, index) => {
-  step.fields.splice(index, 1)
+const removeStepField = (step, index, type) => {
+  if (type === 'table') {
+      step.table_fields.splice(index, 1)
+  } else {
+      step.fields.splice(index, 1)
+  }
 }
 
 onMounted(() => {
