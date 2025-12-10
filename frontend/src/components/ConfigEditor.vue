@@ -198,6 +198,7 @@ const loadConfig = async () => {
     // Add _key to step types for display/logic
     // MIGRATION Logic:
     // If step has is_table=true and no separate table_fields, move fields to table_fields
+    const data = res.data
     for(let key in data.step_types) {
         let s = data.step_types[key]
         s._key = key

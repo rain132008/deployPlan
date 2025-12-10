@@ -42,8 +42,8 @@
             <el-collapse-item v-for="(step, idx) in plan.steps" :key="idx">
                <template #title>
                  <div class="step-title">
-                    <span class="step-seq">{{ idx + 1 }}.</span>
-                    <span class="step-name">{{ getStepName(step.type) }}</span>
+                   <span class="step-seq">{{ idx + 1 }}.</span>
+                    <span class="step-name">{{ getStepName(step) }}</span>
                     <div class="step-ops" @click.stop>
                       <el-button size="small" circle :icon="Top" @click="moveStep(idx, -1)" :disabled="idx === 0" />
                       <el-button size="small" circle :icon="Bottom" @click="moveStep(idx, 1)" :disabled="idx === plan.steps.length - 1" />
@@ -55,8 +55,15 @@
                <!-- Dynamic Step Form -->
                <el-form label-width="120px" size="small">
                  
-                 <!-- MIXED MODE: Render Common Fields First -->
-                 <div v-if="getStepFields(step.type).length > 0">
+                 <!-- ROLLBACK MODE: Description Only -->
+                 <div v-if="step.data.is_rollback">
+                    <el-form-item label="回退说明 (Rollback Desc)">
+                      <el-input type="textarea" :rows="3" v-model="step.data.rollback_desc" placeholder="Enter rollback instructions here..." />
+                    </el-form-item>
+                 </div>
+
+                 <!-- NORMAL MODE: Render Common Fields -->
+                 <div v-else-if="getStepFields(step.type).length > 0">
                    <div v-for="(field, fIdx) in getStepFields(step.type)" :key="fIdx">
                      <el-form-item :label="field.label">
                         <el-date-picker v-if="field.type === 'date'" v-model="step.data[field.key]" type="date" value-format="YYYY-MM-DD" />
@@ -170,8 +177,12 @@ const loadPlan = async () => {
 }
 
 // Helpers
-const getStepName = (type) => {
-  return config.value.step_types[type]?.name || type
+const getStepName = (step) => {
+  let name = config.value.step_types[step.type]?.name || step.type
+  if (step.data && step.data.is_rollback) {
+    name += " (Rollback)"
+  }
+  return name
 }
 const getStepFields = (type) => {
   return config.value.step_types[type]?.fields || []
@@ -185,10 +196,16 @@ const hasTable = (type) => {
 
 // Actions
 const addStep = (type) => {
+  // Add Deployment Step
   plan.value.steps.push({
     type: type,
-    data: {} // Init empty data
-  })
+    data: {} 
+  });
+  // Add Rollback Step
+  plan.value.steps.push({
+    type: type,
+    data: { is_rollback: true, rollback_desc: '' } 
+  });
 }
 
 const removeStep = (idx) => {

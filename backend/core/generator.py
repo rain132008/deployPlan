@@ -22,12 +22,9 @@ def generate_document(plan_data):
     # We expect 'steps' in plan_data which is a list of dicts: {"type": "java_deploy", "data": {...}}
     # We need to map this to subdocs
     rendered_steps = []
+    rendered_rollback_steps = []
     
     steps = plan_data.get("steps", [])
-    config_step_types = plan_data.get("_config_step_types", {}) # Front end might pass this, or we rely on the type field to find file
-    # Actually, we should look up the template file from schema.json or assume a convention.
-    # For simplicity, let's load schema.json here or assume the plan_data includes the template filename if provided.
-    # Better approach: Read schema.json to look up template file for the step type.
     
     # Load schema for template mapping
     import json
@@ -40,44 +37,31 @@ def generate_document(plan_data):
     for step in steps:
         sType = step.get("type")
         sData = step.get("data", {})
+        is_rollback = sData.get("is_rollback", False)
         
         if sType in step_types_config:
             template_file = step_types_config[sType].get("template_file")
             if template_file:
                 sub_tpl_path = os.path.join(STEPS_DIR, template_file)
                 if os.path.exists(sub_tpl_path):
-                    sd = doc.new_subdoc(sub_tpl_path)
-                    # Render the subdoc with step data
-                    # Note: subdoc rendering in docxtpl is a bit implicit. 
-                    # Usually you create a new docxtpl from the file, render it, and then use it as subdoc? 
-                    # No, new_subdoc creates a subdoc object that you can't easily 'render' with jinja beforehand unless you do it manually.
-                    # Wait, docxtpl `new_subdoc` adds the whole file. If that file has tags, they must be rendered with the MAIN context?
-                    # No, tags in subdoc are not automatically rendered by the main render() call unless included in a specific way.
-                    # Actually, a common pattern is:
-                    # sub = doc.new_subdoc(path)
-                    # sub.render(sData) -> This method does not exist on Subdoc usually.
-                    
-                    # Correct approach for docxtpl with separate step templates having variables:
-                    # You instantiate a DocxTemplate for the CHILD, render it, and then save it to a stream (or temp file),
-                    # then use `doc.new_subdoc()` on that Rendered content.
+                    # For rollback steps, we might want to ensure 'rollback_desc' is available. 
+                    # It is already in sData if the frontend put it there.
                     
                     sub_doc = DocxTemplate(sub_tpl_path)
                     sub_doc.render(sData)
                     
-                    # We need to keep this rendered doc in memory or temp file to insert it
-                    # doc.new_subdoc() takes a path.
-                    
                     # Workaround: Save rendered subdoc to a temp file
-                    temp_name = f"temp_{datetime.now().timestamp()}_{sType}.docx"
+                    temp_name = f"temp_{datetime.now().timestamp()}_{sType}_{'rb' if is_rollback else 'dp'}_{id(step)}.docx"
                     temp_path = os.path.join(OUTPUT_DIR, temp_name)
                     sub_doc.save(temp_path)
                     
                     try:
                         sd = doc.new_subdoc(temp_path)
-                        rendered_steps.append(sd)
+                        if is_rollback:
+                            rendered_rollback_steps.append(sd)
+                        else:
+                            rendered_steps.append(sd)
                     finally:
-                        # Cleanup temp file? Or keep for debug. 
-                        # better remove it later. For now let's keep it simple or try to clean up.
                          if os.path.exists(temp_path):
                             os.remove(temp_path)
                             pass
@@ -86,6 +70,7 @@ def generate_document(plan_data):
     # Prepare Context
     context = plan_data.copy()
     context['steps'] = rendered_steps
+    context['rollback_steps'] = rendered_rollback_steps
     
     # Render Master
     doc.render(context)
